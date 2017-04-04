@@ -132,17 +132,17 @@ def getMorphBarcodeRect(image):
 
     # find the contours in the thresholded image, then sort the contours
     # by their area, keeping only the largest one
-    (cntIm, cnts, _) = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    c = sorted(cnts, key = cv2.contourArea, reverse = True)[0]
+    (cntIm, contours, _) = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key = cv2.contourArea, reverse = True)[:5]
 
     # compute the rotated bounding box of the largest contour
-    return cv2.minAreaRect(c)
+    return [cv2.minAreaRect(c) for c in contours]
 
-def getMorphBarcodeSubImg(image):
-    rect = getMorphBarcodeRect(image)
-    return extractRectImg(image, rect)
+def getMorphBarcodeSubImgs(image):
+    rects = getMorphBarcodeRect(image)
+    return [extractRectImg(image, rect) for rect in rects]
 
 images = getImagesFromPDF('test0.pdf')
-barcodeImg = getMorphBarcodeSubImg(images[0])
+barcodeImg = getMorphBarcodeSubImgs(images[0])[0]
 
-cv2.imwrite('barcode.jpg', barcodeImg)
+cv2.imwrite('barcodeMorph.jpg', barcodeImg)
