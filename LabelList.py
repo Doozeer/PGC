@@ -21,6 +21,6 @@ class LabelList(object):
     def sort_by_size_desc(self):
         self.labelList.sort(key=lambda l: l.count, reverse=True)
     
-    def getListSortedBySizeDesc(self):
+    def get_list_sorted_by_size_desc(self):
         self.sort_by_size_desc()
         return self.labelList

@@ -2,10 +2,10 @@ import random as rnd
 
 
 class Label(object):
-    def __init__(self, labelNumber, parentList):
+    def __init__(self, label_number, parent_list):
         self.count = 0
-        self.number = labelNumber
-        self.parentList = parentList
+        self.number = label_number
+        self.parentList = parent_list
         self.color = (rnd.randint(0,255), rnd.randint(0, 255), rnd.randint(0, 255))
         self.orientationSum = 0.0
     

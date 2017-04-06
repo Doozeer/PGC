@@ -152,9 +152,11 @@ def get_morph_barcode_rect(image):
     # compute the rotated bounding box of the largest contour
     return [cv2.minAreaRect(c) for c in contours]
 
+
 def get_morph_barcode_sub_imgs(image):
     rects = get_morph_barcode_rect(image)
     return [extract_rect_img(image, rect) for rect in rects]
+
 
 pdf_images = get_images_from_pdf('test0.pdf')
 barcodeImg = get_morph_barcode_sub_imgs(pdf_images[0])[0]
