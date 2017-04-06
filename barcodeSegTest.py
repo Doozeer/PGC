@@ -1,19 +1,20 @@
 from ImageGrid import ImageGrid
 import cv2
-import PyPDF2 as pypdf
+import PyPDF2 as Pypdf
 import numpy as np
 import platform
-import random as rnd
+
 print "      Python version: {}".format(platform.python_version())
 print "      OpenCV version: {}".format(cv2.__version__)
-print "     PyPDF2 version : {}".format(pypdf.__version__)
+print "     PyPDF2 version : {}".format(Pypdf.__version__)
 
 try:
     CV_CUR_LOAD_IM_GRAY = cv2.CV_LOAD_IMAGE_GRAYSCALE
 except AttributeError:
     CV_CUR_LOAD_IM_GRAY = cv2.IMREAD_GRAYSCALE
 
-def tiff_header_for_CCITT(width, height, img_size, CCITT_group=4):
+
+def tiff_header_for_ccitt(width, height, img_size, ccitt_group=4):
     tiff_header_struct = '<' + '2s' + 'h' + 'l' + 'h' + 'hhll' * 8 + 'h'
     return struct.pack(tiff_header_struct,
                        b'II',  # Byte order indication: Little indian
@@ -23,7 +24,7 @@ def tiff_header_for_CCITT(width, height, img_size, CCITT_group=4):
                        256, 4, 1, width,  # ImageWidth, LONG, 1, width
                        257, 4, 1, height,  # ImageLength, LONG, 1, lenght
                        258, 3, 1, 1,  # BitsPerSample, SHORT, 1, 1
-                       259, 3, 1, CCITT_group,  # Compression, SHORT, 1, 4 = CCITT Group 4 fax encoding
+                       259, 3, 1, ccitt_group,  # Compression, SHORT, 1, 4 = CCITT Group 4 fax encoding
                        262, 3, 1, 0,  # Threshholding, SHORT, 1, 0 = WhiteIsZero
                        273, 4, 1, struct.calcsize(tiff_header_struct),  # StripOffsets, LONG, 1, len of header
                        278, 4, 1, height,  # RowsPerStrip, LONG, 1, lenght
@@ -31,100 +32,113 @@ def tiff_header_for_CCITT(width, height, img_size, CCITT_group=4):
                        0  # last IFD
                        )
 
-def handleCCITTFaxDecodeImg(obj):
+
+def handle_ccitt_fax_decode_img(obj):
     if obj['/DecodeParms']['/K'] == -1:
-        CCITT_group = 4
+        ccitt_group = 4
     else:
-        CCITT_group = 3
+        ccitt_group = 3
     width = obj['/Width']
     height = obj['/Height']
     data = obj._data  # sorry, getData() does not work for CCITTFaxDecode
     img_size = len(data)
-    tiff_header = tiff_header_for_CCITT(width, height, img_size, CCITT_group)
+    tiff_header = tiff_header_for_ccitt(width, height, img_size, ccitt_group)
     data = tiff_header + data
     return cv2.imdecode(np.frombuffer(data, np.uint8), CV_CUR_LOAD_IM_GRAY)
 
-def handleOtherImg(obj):
+
+def handle_other_img(obj):
     data = obj._data
     return 255-cv2.imdecode(np.frombuffer(data, np.uint8), CV_CUR_LOAD_IM_GRAY)
 
-def getImgFromPage(pdfObj, page):
-    colorSpaceDict = {}
-    pageObj = pdfObj.getPage(page)
-    xObj = pageObj['/Resources']['/XObject'].getObject()
-    for obj in xObj:
-        if xObj[obj]['/Subtype'] == '/Image':
-            if xObj[obj]['/Filter'] == '/CCITTFaxDecode':
-                return handleCCITTFaxDecodeImg(xObj[obj])
-            else:
-                return handleOtherImg(xObj[obj])
 
-def getImagesFromPDF(filePath):
-    pdfObj = pypdf.PdfFileReader(open(filePath, "rb"))
-    nPages = pdfObj.getNumPages()
-    images = [getImgFromPage(pdfObj, page) for page in range(nPages)]
+def get_img_from_page(pdf_obj, page):
+    page_obj = pdf_obj.getPage(page)
+    x_obj = page_obj['/Resources']['/XObject'].getObject()
+    for obj in x_obj:
+        if x_obj[obj]['/Subtype'] == '/Image':
+            if x_obj[obj]['/Filter'] == '/CCITTFaxDecode':
+                return handle_ccitt_fax_decode_img(x_obj[obj])
+            else:
+                return handle_other_img(x_obj[obj])
+
+
+def get_images_from_pdf(file_path):
+    pdf_obj = Pypdf.PdfFileReader(open(file_path, "rb"))
+    n_pages = pdf_obj.getNumPages()
+    images = [get_img_from_page(pdf_obj, page) for page in range(n_pages)]
     return images
 
-def scharrGradient(image):
+
+def scharr_gradient(image):
     # compute the Scharr gradient magnitude representation of the images
     # in both the x and y direction
-    gradX = cv2.Scharr(image, ddepth = cv2.CV_32F, dx = 1, dy = 0)
-    gradY = cv2.Scharr(image, ddepth = cv2.CV_32F, dx = 0, dy = 1)
+    grad_x = cv2.Scharr(image, ddepth=cv2.CV_32F, dx=1, dy=0)
+    grad_y = cv2.Scharr(image, ddepth=cv2.CV_32F, dx=0, dy=1)
+
     # subtract the y-gradient from the x-gradient
-    gradient = cv2.subtract(gradX, gradY)
+    gradient = cv2.subtract(grad_x, grad_y)
     gradient = cv2.convertScaleAbs(gradient)
     return gradient
 
-def otsuBinary(image):
-    # Otsu's thresholding after Gaussian filtering
-    blurred = cv2.GaussianBlur(image,(5,5),0)
-    threshVal, threshImg = cv2.threshold(blurred,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    return threshImg
 
-def morphClose(image, kernelSize):
+def otsu_binary(image):
+    # Otsu's thresholding after Gaussian filtering
+    blurred = cv2.GaussianBlur(image, (5, 5), 0)
+    thresh_val, thresh_img = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    return thresh_img
+
+
+def morph_close(image, kernel_size):
     # construct a closing kernel and apply it to the thresholded image
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernelSize)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
     closed = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
     return closed
 
-def extractRectImg(image, rect):
-    widthPadding = 50
+
+def extract_rect_img(image, rect):
+    width_padding = 50
     box = cv2.boxPoints(rect) 
     box = np.int0(box)
 
-    W = rect[1][0]
-    H = rect[1][1]
+    w = rect[1][0]
+    h = rect[1][1]
 
-    Xs = [i[0] for i in box]
-    Ys = [i[1] for i in box]
-    x1 = min(Xs)
-    x2 = max(Xs)
-    y1 = min(Ys)
-    y2 = max(Ys)
+    xs = [i[0] for i in box]
+    ys = [i[1] for i in box]
+    x1 = min(xs)
+    x2 = max(xs)
+    y1 = min(ys)
+    y2 = max(ys)
 
     angle = rect[2]
     if angle < -45:
         angle += 90
 
     # Center of rectangle in source image
-    center = ((x1+x2)/2,(y1+y2)/2)
+    center = ((x1+x2)/2, (y1+y2)/2)
+
     # Size of the upright rectangle bounding the rotated rectangle
-    size = (x2-x1+widthPadding, y2-y1)
-    M = cv2.getRotationMatrix2D((size[0]/2, size[1]/2), angle, 1.0)
+    size = (x2-x1+width_padding, y2-y1)
+
+    m = cv2.getRotationMatrix2D((size[0]/2, size[1]/2), angle, 1.0)
+
     # Cropped upright rectangle
     cropped = cv2.getRectSubPix(image, size, center)
-    cropped = cv2.warpAffine(cropped, M, size)
-    croppedW = H if H > W else W
-    croppedH = H if H < W else W
+    cropped = cv2.warpAffine(cropped, m, size)
+    cropped_w = h if h > w else w
+    cropped_h = h if h < w else w
+
     # Final cropped & rotated rectangle
-    return cv2.getRectSubPix(cropped, (int(croppedW)+widthPadding,int(croppedH)), (size[0]/2, size[1]/2))
+    return cv2.getRectSubPix(cropped, (int(cropped_w)+width_padding,int(cropped_h)), (size[0]/2, size[1]/2))
 
-def getMorphBarcodeRect(image):
-    gradient = scharrGradient(image)
+
+def get_morph_barcode_rect(image):
+    gradient = scharr_gradient(image)
     # blur and threshold the image
-    thresh = otsuBinary(gradient)
+    thresh = otsu_binary(gradient)
 
-    closed = morphClose(thresh, (21, 7))
+    closed = morph_close(thresh, (21, 7))
 
     # perform a series of erosions and dilations
     closed = cv2.erode(closed, None, iterations = 6)
@@ -133,16 +147,16 @@ def getMorphBarcodeRect(image):
     # find the contours in the thresholded image, then sort the contours
     # by their area, keeping only the largest one
     (cntIm, contours, _) = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key = cv2.contourArea, reverse = True)[:5]
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
 
     # compute the rotated bounding box of the largest contour
     return [cv2.minAreaRect(c) for c in contours]
 
-def getMorphBarcodeSubImgs(image):
-    rects = getMorphBarcodeRect(image)
-    return [extractRectImg(image, rect) for rect in rects]
+def get_morph_barcode_sub_imgs(image):
+    rects = get_morph_barcode_rect(image)
+    return [extract_rect_img(image, rect) for rect in rects]
 
-images = getImagesFromPDF('test0.pdf')
-barcodeImg = getMorphBarcodeSubImgs(images[0])[0]
+pdf_images = get_images_from_pdf('test0.pdf')
+barcodeImg = get_morph_barcode_sub_imgs(pdf_images[0])[0]
 
 cv2.imwrite('barcodeMorph.jpg', barcodeImg)

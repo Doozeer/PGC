@@ -2,62 +2,65 @@ import numpy as np
 from Cell import Cell
 from LabelList import LabelList
 
+
 class ImageGrid(object):
-    def __init__(self, image, gridWidth, gridHeight):
+    def __init__(self, image, grid_width, grid_height):
         self.img = image.copy()
-        self.width = gridWidth
-        self.height = gridHeight
-        tempGrid = [np.hsplit(row, gridWidth) for row in np.vsplit(self.img, gridHeight)]
-        self.grid = [[Cell(rowIdx, colIdx, img) for colIdx, img in enumerate(row)] for rowIdx, row in enumerate(tempGrid)]
-        self.labelList = self.labelCells()
+        self.width = grid_width
+        self.height = grid_height
+        temp_grid = [np.hsplit(row, grid_width) for row in np.vsplit(self.img, grid_height)]
+        self.grid = [[Cell(rowIdx, colIdx, img) for colIdx, img in enumerate(row)] for rowIdx, row in enumerate(temp_grid)]
+        self.labelList = self.label_cells()
     
-    def labelCells(self):
-        labelList = LabelList()
+    def label_cells(self):
+        label_list = LabelList()
         for row in range(len(self.grid)):
             for col in range(len(self.grid[0])):
-                if self.grid[row][col].label == None:
-                    curLabel = labelList.getNewLabel()
-                    self.recursiveLabel(row, col, curLabel)
-        return labelList
-    
-    def calcAngleDiff(self, angle1, angle2):
+                if self.grid[row][col].label is None:
+                    cur_label = label_list.get_new_label()
+                    self.recursive_label(row, col, cur_label)
+        return label_list
+
+    @staticmethod
+    def calc_angle_diff(angle1, angle2):
         diff = abs(angle1 - angle2)
         diff = diff if diff <= 90 else (180.0 - diff)
         return diff
     
-    def recursiveLabel(self, row, col, curLabel):
-        gridHeight = len(self.grid)
-        gridWidth = len(self.grid[0])
-        angleThreshold = 3
-        if row in range(gridHeight) and col in range(gridWidth):
-            curCell = self.grid[row][col]
-            if curCell.hasBarcodeFeatures and curCell.label == None:
-                curLabel.assignTo(curCell)
+    def recursive_label(self, row, col, curLabel):
+        grid_height = len(self.grid)
+        grid_width = len(self.grid[0])
+        angle_threshold = 3
+        if row in range(grid_height) and col in range(grid_width):
+            cur_cell = self.grid[row][col]
+            if cur_cell.hasBarcodeFeatures and cur_cell.label is None:
+                curLabel.assign_to(cur_cell)
                 for i in range(-1, 2):
                     for j in range(-1, 2):
-                        newRow = row+i
-                        newCol = col+j
-                        if newRow in range(gridHeight) and newCol in range(gridWidth):
-                            neighbor = self.grid[newRow][newCol]
-                            angleDiff = self.calcAngleDiff(curCell.orientation, neighbor.orientation)
-                            if angleDiff < angleThreshold:
-                                self.recursiveLabel(newRow, newCol, curLabel)
+                        new_row = row+i
+                        new_col = col+j
+                        if new_row in range(grid_height) and new_col in range(grid_width):
+                            neighbor = self.grid[new_row][new_col]
+                            angle_diff = ImageGrid.calc_angle_diff(cur_cell.orientation, neighbor.orientation)
+                            if angle_diff < angle_threshold:
+                                self.recursive_label(new_row, new_col, curLabel)
+
+    @staticmethod
+    def get_concat_grid(img_grid):
+        return np.concatenate([np.concatenate(row, axis=1) for row in img_grid], axis=0)
     
-    def getConcatGrid(self, imgGrid):
-        return np.concatenate([np.concatenate(row, axis=1) for row in imgGrid], axis=0)
+    def get_grid_image(self):
+        cell_img_grid = [[cell.img for cell in row]for row in self.grid]
+        return ImageGrid.get_concat_grid(cell_img_grid)
     
-    def getGridImage(self):
-        cellImgGrid = [[cell.img for cell in row]for row in self.grid]
-        return self.getConcatGrid(cellImgGrid)
+    def get_label_border_image(self):
+        label_img_grid = [[cell.get_label_border_image() for cell in row] for row in self.grid]
+        return ImageGrid.get_concat_grid(label_img_grid)
     
-    def getLabelBorderImage(self):
-        labelImgGrid = [[cell.getLabelBorderImage() for cell in row]for row in self.grid]
-        return self.getConcatGrid(labelImgGrid)
+    def get_label_orientation_image(self):
+        label_img_grid = [[cell.get_label_orientation_image() for cell in row] for row in self.grid]
+        return ImageGrid.get_concat_grid(label_img_grid)
     
-    def getLabelOrientationImage(self):
-        labelImgGrid = [[cell.getLabelOrientationImage() for cell in row]for row in self.grid]
-        return self.getConcatGrid(labelImgGrid)
-    
-    def getLabelMaskImage(self, label):
-        labelMaskGrid = [[cell.getLabelMaskImage(label) for cell in row]for row in self.grid]
-        return self.getConcatGrid(labelMaskGrid)
+    def get_label_mask_image(self, label):
+        label_mask_grid = [[cell.get_label_mask_image(label) for cell in row] for row in self.grid]
+        return ImageGrid.get_concat_grid(label_mask_grid)

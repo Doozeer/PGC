@@ -1,25 +1,26 @@
 from Label import Label
 
+
 class LabelList(object):
     def __init__(self):
         self.labelList = []
     
-    def getLabelCount(self):
+    def get_label_count(self):
         return len(self.labelList)
     
-    def getNewLabel(self):
-        newLabel = Label(self.getLabelCount(), self)
-        self.labelList.append(newLabel)
-        return newLabel
+    def get_new_label(self):
+        new_label = Label(self.get_label_count(), self)
+        self.labelList.append(new_label)
+        return new_label
     
-    def getCurLabel(self):
+    def get_cur_label(self):
         if len(self.labelList) < 1:
-            self.getNewLabel()
+            self.get_new_label()
         return self.labelList[-1]
     
-    def sortBySizeDesc(self):
+    def sort_by_size_desc(self):
         self.labelList.sort(key=lambda l: l.count, reverse=True)
     
     def getListSortedBySizeDesc(self):
-        self.sortBySizeDesc()
+        self.sort_by_size_desc()
         return self.labelList
