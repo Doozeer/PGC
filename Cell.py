@@ -4,8 +4,8 @@ import numpy as np
 
 
 class Cell(object):
-    def __init__(self, row, col, cellImg):
-        self.img = cellImg
+    def __init__(self, row, col, cell_img):
+        self.img = cell_img
         self.row = row
         self.col = col
         self.hasBarcodeFeatures = False
@@ -15,13 +15,13 @@ class Cell(object):
         self.evaluate_barcode_features()
     
     def get_img_contours(self):
-        cnt_im, cnts, hierarchy = cv2.findContours(self.img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        self.contours = cnts
-        return cnts
+        if self.contours is None:
+            _, cnts, __ = cv2.findContours(self.img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            self.contours = cnts
+        return self.contours
     
     def get_contour_img(self):
-        if self.contours is None:
-            self.get_img_contours()
+        self.get_img_contours()
         cell_img = cv2.cvtColor(255-self.img, cv2.COLOR_GRAY2RGB)
         return cv2.drawContours(cell_img, self.contours, -1, (0,255,0), 3)
     
@@ -65,8 +65,7 @@ class Cell(object):
             raise
     
     def evaluate_barcode_features(self):
-        if self.contours is None:
-            self.get_img_contours()
+        self.get_img_contours()
         
         # Filter out smaller contours which should be random noise
         size_thresh = 30
