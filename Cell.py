@@ -1,9 +1,13 @@
 import cv2
 import math
 import numpy as np
+from CommonUtils import Utils
 
 
 class Cell(object):
+    COMPACTNESS_THRESHOLD = 1
+    CONTOUR_SIZE_THRESH = 30
+
     def __init__(self, row, col, cell_img):
         self.img = cell_img
         self.row = row
@@ -47,32 +51,16 @@ class Cell(object):
         cnt_im, cnts, hierarchy = cv2.findContours(skeletonized, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         self.contours = cnts
         return cnts
-
-    @staticmethod
-    def get_contour_orientation(contour):
-        moments = cv2.moments(contour)
-        mu00 = moments['m00']
-        mul11 = moments['mu11'] / mu00
-        mul02 = moments['mu02'] / mu00
-        mul20 = moments['mu20'] / mu00
-        if (mul20 - mul02) == 0:
-            return None
-        try:
-            angle_rad = 0.5 * math.atan((2 * mul11) / (mul20 - mul02))
-            return math.degrees(angle_rad)
-        except:
-            print contour
-            raise
     
     def evaluate_barcode_features(self):
         self.get_img_contours()
         
         # Filter out smaller contours which should be random noise
-        size_thresh = 30
-        filtered_contours = [contour for contour in self.contours if cv2.moments(contour)['m00'] > size_thresh]
+        filtered_contours = filter(lambda c: Utils.get_contour_size(c) > Cell.CONTOUR_SIZE_THRESH, self.contours)
         
         # Get contour orientations
-        angles = [x for x in [Cell.get_contour_orientation(contour) for contour in filtered_contours] if x is not None]
+        angles = [Utils.get_contour_orientation(contour) for contour in filtered_contours]
+        angles = filter(lambda a: a is not None, angles)
         
         # Eliminate cells with a small number of valid contours
         element_count = len(angles)
@@ -90,8 +78,7 @@ class Cell(object):
         
         # Smaller compactness should occur for a group of similarly oriented contours
         mean_compactness = compactness / float(len(cluster_elements))
-        compactness_threshold = 1
-        if mean_compactness < compactness_threshold:
+        if mean_compactness < Cell.COMPACTNESS_THRESHOLD:
             self.hasBarcodeFeatures = True
             self.orientation = np.mean(cluster_elements)
             return self

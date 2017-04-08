@@ -1,6 +1,7 @@
 import numpy as np
 from Cell import Cell
 from LabelList import LabelList
+from CommonUtils import Utils
 
 
 class ImageGrid(object):
@@ -20,12 +21,6 @@ class ImageGrid(object):
                     cur_label = label_list.get_new_label()
                     self.recursive_label(row, col, cur_label)
         return label_list
-
-    @staticmethod
-    def calc_angle_diff(angle1, angle2):
-        diff = abs(angle1 - angle2)
-        diff = diff if diff <= 90 else (180.0 - diff)
-        return diff
     
     def recursive_label(self, row, col, curLabel):
         grid_height = len(self.grid)
@@ -41,7 +36,7 @@ class ImageGrid(object):
                         new_col = col+j
                         if new_row in range(grid_height) and new_col in range(grid_width):
                             neighbor = self.grid[new_row][new_col]
-                            angle_diff = ImageGrid.calc_angle_diff(cur_cell.orientation, neighbor.orientation)
+                            angle_diff = Utils.calc_angle_diff(cur_cell.orientation, neighbor.orientation)
                             if angle_diff < angle_threshold:
                                 self.recursive_label(new_row, new_col, curLabel)
 

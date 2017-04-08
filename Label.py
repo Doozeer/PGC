@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import random as rnd
-from Cell import Cell
+from CommonUtils import Utils
 
 
 class Label(object):
@@ -28,6 +28,11 @@ class Label(object):
         else:
             return None
 
+    def remove_from_all_cells(self):
+        for cell in self.cellList:
+            cell.label = None
+        self.cellList = []
+
     def get_label_patch_orientation(self):
         if self.get_cell_count() == 0:
             return None
@@ -50,5 +55,5 @@ class Label(object):
 
             # Get label contour to compute angle
             _, cnts, __ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-            return Cell.get_contour_orientation(cnts[0])
+            return Utils.get_contour_orientation(cnts[0])
 
