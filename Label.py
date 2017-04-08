@@ -5,12 +5,18 @@ from CommonUtils import Utils
 
 
 class Label(object):
+    MINIMUM_ANGLE_DIFF = 20
+
     def __init__(self, label_number, parent_list):
         self.cellList = []
         self.number = label_number
         self.parentList = parent_list
-        self.color = (rnd.randint(0,255), rnd.randint(0, 255), rnd.randint(0, 255))
+        self.color = (rnd.randint(0, 255), rnd.randint(0, 255), rnd.randint(0, 255))
         self.orientationSum = 0.0
+
+    def __del__(self):
+        self.remove_from_all_cells()
+        self.parentList = None
 
     def get_cell_count(self):
         return len(self.cellList)
@@ -57,3 +63,11 @@ class Label(object):
             _, cnts, __ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             return Utils.get_contour_orientation(cnts[0])
 
+    def is_barcode_pattern(self):
+        label_angle = self.get_label_patch_orientation()
+        mean_cell_angle = self.get_mean_cell_orientation()
+        angle_diff = Utils.calc_angle_diff(label_angle, mean_cell_angle)
+        if angle_diff < Label.MINIMUM_ANGLE_DIFF:
+            return False
+        else:
+            return True

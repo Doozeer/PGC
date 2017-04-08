@@ -20,6 +20,7 @@ class ImageGrid(object):
                 if self.grid[row][col].label is None:
                     cur_label = label_list.get_new_label()
                     self.recursive_label(row, col, cur_label)
+        label_list.remove_non_pattern_labels()
         return label_list
     
     def recursive_label(self, row, col, curLabel):

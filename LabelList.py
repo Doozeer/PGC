@@ -24,3 +24,12 @@ class LabelList(object):
     def get_list_sorted_by_size_desc(self):
         self.sort_by_size_desc()
         return self.labelList
+
+    def remove_label(self, label):
+        self.labelList.remove(label)
+        del label
+
+    def remove_non_pattern_labels(self):
+        for label in self.labelList:
+            if not label.is_barcode_pattern():
+                self.remove_label(label)
