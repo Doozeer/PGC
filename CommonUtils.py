@@ -8,7 +8,7 @@ import struct
 
 
 class Utils(object):
-    IMG_DIR = '/Users/leonardofilipe/PGC-img/'
+    IMG_DIR = ''
 
     try:
         CV_CUR_LOAD_IM_GRAY = cv2.CV_LOAD_IMAGE_GRAYSCALE
@@ -176,7 +176,6 @@ class Utils(object):
     @staticmethod
     def decode_barcode_img(cv2_img):
         try:
-            _, cv2_img = cv2.threshold(cv2_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             r, png_bytes = cv2.imencode('.png', cv2_img)
             pil_png = Image.open(io.BytesIO(png_bytes)).convert('L')
             width, height = pil_png.size
@@ -191,5 +190,5 @@ class Utils(object):
             else:
                 return None
         except Exception as e:
-            print e.message
+            print e
             return None
