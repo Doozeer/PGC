@@ -1,5 +1,8 @@
 import cv2, math
 import numpy as np
+from PIL import Image
+import zbar
+import io
 
 
 class Utils(object):
@@ -50,3 +53,24 @@ class Utils(object):
             return np.mean(elements[labels==biggest_cluster])
         else:
             return np.mean(elements)
+
+    @staticmethod
+    def decode_barcode_img(cv2_img):
+        try:
+            _, cv2_img = cv2.threshold(cv2_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            r, png_bytes = cv2.imencode('.png', cv2_img)
+            pil_png = Image.open(io.BytesIO(png_bytes)).convert('L')
+            width, height = pil_png.size
+            png_raw = pil_png.tostring()
+            scanner = zbar.ImageScanner()
+            scanner.parse_config('enable')
+            image = zbar.Image(width, height, 'Y800', png_raw)
+            scanner.scan(image)
+            symbols = image.symbols
+            for symbol in symbols:
+                return symbol.data
+            else:
+                return None
+        except Exception as e:
+            print e.message
+            return None

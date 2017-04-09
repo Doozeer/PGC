@@ -173,24 +173,6 @@ def get_subimg_barcode_rects(image, grid_dim):
     return filter(lambda x: x is not None, rects)
 
 
-def decode_barcode_img(cv2_img):
-    #cv2_img = 255-cv2_img
-    _, cv2_img = cv2.threshold(cv2_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    r, png_bytes = cv2.imencode('.png', cv2_img)
-    pil_png = Image.open(io.BytesIO(png_bytes)).convert('L')
-    width, height = pil_png.size
-    png_raw = pil_png.tostring()
-    scanner = zbar.ImageScanner()
-    scanner.parse_config('enable')
-    image = zbar.Image(width, height, 'Y800', png_raw)
-    scanner.scan(image)
-    symbols = image.symbols
-    for symbol in symbols:
-        print symbol.data
-    del image
-    return symbols
-
-
 for file in os.listdir(Utils.IMG_DIR):
     path = os.path.join(Utils.IMG_DIR, file)
     try:
@@ -203,12 +185,12 @@ pdf_images = get_images_from_pdf('test0.pdf')
 
 barcodeImg = get_morph_barcode_sub_imgs(pdf_images[0])[0]
 cv2.imwrite(Utils.IMG_DIR + 'barcodeMorph.jpg', barcodeImg)
-decode_barcode_img(barcodeImg)
+print Utils.decode_barcode_img(barcodeImg)
 
 i = 1
 barcode_imgs = get_subimg_barcode_sub_imgs(pdf_images[0])
 for img in barcode_imgs:
-    decode_barcode_img(img)
+    print Utils.decode_barcode_img(img)
     cv2.imwrite(Utils.IMG_DIR + 'barcodeSub' + str(i) + '.jpg', img)
     i += 1
 
