@@ -7,24 +7,16 @@ class Utils(object):
 
     @staticmethod
     def get_contour_orientation(contour):
-        rect = cv2.minAreaRect(contour)
-        angle = rect[2]
-        if angle < -45:
-            angle += 90
-        return angle
-
         moments = cv2.moments(contour)
-        mu00 = moments['m00']
-        if mu00 == 0:
-            return None
-        mul11 = moments['mu11'] / mu00
-        mul02 = moments['mu02'] / mu00
-        mul20 = moments['mu20'] / mu00
-        if (mul20 - mul02) == 0:
+        mu11 = moments['mu11']
+        mu02 = moments['mu02']
+        mu20 = moments['mu20']
+        if (mu20 - mu02) == 0:
             return None
         try:
-            angle_rad = 0.5 * math.atan((2 * mul11) / (mul20 - mul02))
-            return math.degrees(angle_rad)
+            angle_rad = 0.5 * math.atan((2 * mu11) / (mu20 - mu02))
+            angle_deg = math.degrees(angle_rad)
+            return angle_deg
         except:
             print contour
             raise
