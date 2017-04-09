@@ -5,8 +5,8 @@ from CommonUtils import Utils
 
 
 class Cell(object):
-    COMPACTNESS_THRESHOLD = 1
-    CONTOUR_SIZE_THRESH = 30
+    COMPACTNESS_THRESHOLD = 3
+    CONTOUR_SIZE_THRESH = 10
 
     def __init__(self, row, col, cell_img):
         self.img = cell_img
@@ -74,13 +74,14 @@ class Cell(object):
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 0.5)
         flags = cv2.KMEANS_RANDOM_CENTERS
         cluster_elements = np.float32(angles)
+        cluster_elements = cluster_elements.reshape((element_count, 1))
         compactness, labels, centers = cv2.kmeans(cluster_elements, 2, None, criteria, 10, flags)
         
         # Smaller compactness should occur for a group of similarly oriented contours
-        mean_compactness = compactness / float(len(cluster_elements))
+        mean_compactness = compactness / float(element_count)
         if mean_compactness < Cell.COMPACTNESS_THRESHOLD:
             self.hasBarcodeFeatures = True
-            self.orientation = np.mean(cluster_elements)
+            self.orientation = Utils.get_cluster_mean(cluster_elements, labels)
             return self
         else:
             self.hasBarcodeFeatures = False
@@ -109,7 +110,7 @@ class Cell(object):
             img[:, :] = 255
             return img
         else:
-            img[:,:] = 0
+            img[:, :] = 0
             return img
     
     def get_label_border_image(self):

@@ -1,10 +1,13 @@
 import numpy as np
+import cv2
 from Cell import Cell
 from LabelList import LabelList
 from CommonUtils import Utils
 
 
 class ImageGrid(object):
+    ANGLE_DIFF_THRESHOLD = 3
+
     def __init__(self, image, grid_width, grid_height):
         self.img = image.copy()
         self.width = grid_width
@@ -18,15 +21,16 @@ class ImageGrid(object):
         for row in range(len(self.grid)):
             for col in range(len(self.grid[0])):
                 if self.grid[row][col].label is None:
-                    cur_label = label_list.get_new_label()
+                    cur_label = label_list.get_cur_label()
+                    if cur_label.get_cell_count() > 0:
+                        cur_label = label_list.get_new_label()
                     self.recursive_label(row, col, cur_label)
-        label_list.remove_non_pattern_labels()
+        #label_list.remove_non_pattern_labels()
         return label_list
     
     def recursive_label(self, row, col, curLabel):
         grid_height = len(self.grid)
         grid_width = len(self.grid[0])
-        angle_threshold = 3
         if row in range(grid_height) and col in range(grid_width):
             cur_cell = self.grid[row][col]
             if cur_cell.hasBarcodeFeatures and cur_cell.label is None:
@@ -38,8 +42,16 @@ class ImageGrid(object):
                         if new_row in range(grid_height) and new_col in range(grid_width):
                             neighbor = self.grid[new_row][new_col]
                             angle_diff = Utils.calc_angle_diff(cur_cell.orientation, neighbor.orientation)
-                            if angle_diff < angle_threshold:
+                            if angle_diff < ImageGrid.ANGLE_DIFF_THRESHOLD:
                                 self.recursive_label(new_row, new_col, curLabel)
+
+    def get_label_rect(self, label):
+        img = self.get_label_mask_image(label)
+        _, contours, __ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if len(contours) < 1:
+            return None
+        contour = sorted(contours, key=cv2.contourArea, reverse=True)[0]
+        return cv2.minAreaRect(contour)
 
     @staticmethod
     def get_concat_grid(img_grid):

@@ -19,17 +19,13 @@ class LabelList(object):
         return self.labelList[-1]
     
     def sort_by_size_desc(self):
-        self.labelList.sort(key=lambda l: l.count, reverse=True)
+        self.labelList.sort(key=lambda l: l.get_cell_count(), reverse=True)
     
     def get_list_sorted_by_size_desc(self):
         self.sort_by_size_desc()
         return self.labelList
 
-    def remove_label(self, label):
-        self.labelList.remove(label)
-        del label
-
     def remove_non_pattern_labels(self):
         for label in self.labelList:
             if not label.is_barcode_pattern():
-                self.remove_label(label)
+                label.remove_from_all_cells()

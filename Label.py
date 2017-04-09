@@ -5,7 +5,7 @@ from CommonUtils import Utils
 
 
 class Label(object):
-    MINIMUM_ANGLE_DIFF = 20
+    MINIMUM_ANGLE_DIFF = 30
 
     def __init__(self, label_number, parent_list):
         self.cellList = []
@@ -47,10 +47,10 @@ class Label(object):
         else:
             # Construct label point representation
             cell_points = [(cell.row, cell.col) for cell in self.cellList]
-            min_row = min(cell_points, lambda c: c[0])
-            max_row = max(cell_points, lambda c: c[0])
-            min_col = min(cell_points, lambda c: c[1])
-            max_col = max(cell_points, lambda c: c[1])
+            min_row = min(cell_points, key=lambda c: c[0])[0]
+            max_row = max(cell_points, key=lambda c: c[0])[0]
+            min_col = min(cell_points, key=lambda c: c[1])[1]
+            max_col = max(cell_points, key=lambda c: c[1])[1]
             offset = 5
             label_height = max_row - min_row
             label_width = max_col - min_col
@@ -60,14 +60,21 @@ class Label(object):
                 img[row, col] = 255
 
             # Get label contour to compute angle
-            _, cnts, __ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            _, cnts, __ = cv2.findContours(Utils.otsu_binary(img), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            cv2.imwrite(Utils.IMG_DIR + 'label%d.png' % self.number, img)
             return Utils.get_contour_orientation(cnts[0])
 
     def is_barcode_pattern(self):
-        label_angle = self.get_label_patch_orientation()
-        mean_cell_angle = self.get_mean_cell_orientation()
-        angle_diff = Utils.calc_angle_diff(label_angle, mean_cell_angle)
-        if angle_diff < Label.MINIMUM_ANGLE_DIFF:
-            return False
+        if self.get_cell_count() > 0:
+            label_angle = self.get_label_patch_orientation()
+            mean_cell_angle = self.get_mean_cell_orientation()
+            if label_angle is None or mean_cell_angle is None:
+                return False
+
+            angle_diff = Utils.calc_angle_diff(label_angle, mean_cell_angle)
+            if angle_diff < Label.MINIMUM_ANGLE_DIFF:
+                return False
+            else:
+                return True
         else:
-            return True
+            return False
