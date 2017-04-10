@@ -40,8 +40,14 @@ def get_morph_barcode_sub_imgs(image):
 
 
 def get_subimg_barcode_sub_imgs(image):
-    resize_shape = (1632, 2368)
-    grid_shape = (51, 74)
+    cell_size = 40
+    height, width = image.shape
+    grid_height = int(height / cell_size)
+    grid_width = int(width / cell_size)
+    resize_shape = (grid_width*cell_size, grid_height*cell_size)
+    grid_shape = (grid_width, grid_height)
+    #resize_shape = (1632, 2368)
+    #grid_shape = (51, 74)
     resized = cv2.resize(image, resize_shape)
     binary = Utils.otsu_binary(resized)
     rects = get_subimg_barcode_rects(binary, grid_shape)
@@ -92,22 +98,22 @@ def test_segmentation_method(barcode_seg_func):
 start_time = time.time()
 tests, success = test_segmentation_method(get_morph_barcode_sub_imgs)
 time_elapsed = time.time() - start_time
-print 'Morphological test results: {:4d} out of {:4d} images in {:.2f} s'.format(success, tests, time_elapsed)
+print 'Morphological test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
 
 start_time = time.time()
 tests, success = test_segmentation_method(get_subimg_barcode_sub_imgs)
 time_elapsed = time.time() - start_time
-print '    Sub image test results: {:4d} out of {:4d} imagesin {:.2f} s'.format(success, tests, time_elapsed)
+print '    Sub image test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
 
-#pdf_images = Utils.get_images_from_pdf('test0.pdf')
-
-#barcodeImg = get_morph_barcode_sub_imgs(pdf_images[0])[0]
-#cv2.imwrite(Utils.IMG_DIR + 'barcodeMorph.jpg', barcodeImg)
-#print Utils.decode_barcode_img(barcodeImg)
-
-#i = 1
-#barcode_imgs = get_subimg_barcode_sub_imgs(pdf_images[0])
-#for img in barcode_imgs:
+# pdf_images = Utils.get_images_from_pdf('test0.pdf')
+#
+# barcodeImg = get_morph_barcode_sub_imgs(pdf_images[0])[0]
+# cv2.imwrite(Utils.IMG_DIR + 'barcodeMorph.jpg', barcodeImg)
+# print Utils.decode_barcode_img(barcodeImg)
+#
+# i = 1
+# barcode_imgs = get_subimg_barcode_sub_imgs(pdf_images[0])
+# for img in barcode_imgs:
 #    print Utils.decode_barcode_img(img)
 #    cv2.imwrite(Utils.IMG_DIR + 'barcodeSub' + str(i) + '.jpg', img)
 #    i += 1

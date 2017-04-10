@@ -1,11 +1,10 @@
 import cv2
-import math
 import numpy as np
 from CommonUtils import Utils
 
 
 class Cell(object):
-    COMPACTNESS_THRESHOLD = 3
+    COMPACTNESS_THRESHOLD = 2
     CONTOUR_SIZE_THRESH = 10
 
     def __init__(self, row, col, cell_img):
