@@ -6,13 +6,8 @@ import platform
 import os
 import glob
 import time
-import shutil
 
-print "      Python version: {}".format(platform.python_version())
-print "      OpenCV version: {}".format(cv2.__version__)
-
-Utils.IMG_DIR = '/Users/leonardofilipe/PGC-img/'
-PDF_PATH = '/Users/leonardofilipe/Dropbox/UFABC/PGC-Leonardo/codigo/corrections/'
+CELL_SIZE = 40
 
 def get_morph_barcode_rect(image):
     gradient = Utils.scharr_gradient(image)
@@ -34,20 +29,55 @@ def get_morph_barcode_rect(image):
     return [cv2.minAreaRect(c) for c in contours]
 
 
+def get_mctest_barcode_rect(img):
+    img = cv2.GaussianBlur(img, (3, 3), 0)
+    ret, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    se = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 1))
+    img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, se)
+
+    img = cv2.erode(img, None, iterations=10)
+    img = cv2.dilate(img, None, iterations=10)
+
+    # find the contours in the thresholded image
+    (cntIm, cnts, _) = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # if no contours were found, return None
+    if len(cnts) == 0:
+        return None
+
+    # otherwise, sort the contours by area and compute the rotated
+    # bounding box of the largest contour
+    contours = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
+    return [cv2.minAreaRect(c) for c in contours]
+
+
+def mctest_extract_rect_img(image, rect):
+    box = np.int0(cv2.boxPoints(rect))
+    square = box
+    y1, x1 = square[1]
+    y2, x2 = square[3]
+    [p1, p2] = [[min(x1, x2), min(y1, y2)], [max(x1, x2), max(y1, y2)]]
+    bord = 5
+    return image[p1[0] - bord:p2[0] + bord, p1[1] - bord:p2[1] + bord]
+
+
 def get_morph_barcode_sub_imgs(image):
-    rects = get_morph_barcode_rect(image)
+    rects = get_morph_barcode_rect(255-image)
     return [Utils.extract_rect_img(255-image, rect) for rect in rects]
 
 
+def get_mctest_barcode_sub_imgs(image):
+    rects = get_mctest_barcode_rect(255-image)
+    return [mctest_extract_rect_img(255-image, rect) for rect in rects]
+
+
 def get_subimg_barcode_sub_imgs(image):
-    cell_size = 40
     height, width = image.shape
-    grid_height = int(height / cell_size)
-    grid_width = int(width / cell_size)
-    resize_shape = (grid_width*cell_size, grid_height*cell_size)
+    grid_height = int(height / CELL_SIZE)
+    grid_width = int(width / CELL_SIZE)
+    resize_shape = (grid_width*CELL_SIZE, grid_height*CELL_SIZE)
     grid_shape = (grid_width, grid_height)
-    #resize_shape = (1632, 2368)
-    #grid_shape = (51, 74)
     resized = cv2.resize(image, resize_shape)
     binary = Utils.otsu_binary(resized)
     rects = get_subimg_barcode_rects(binary, grid_shape)
@@ -62,15 +92,6 @@ def get_subimg_barcode_rects(image, grid_dim):
     return filter(lambda x: x is not None, rects)
 
 
-for file in os.listdir(Utils.IMG_DIR):
-    path = os.path.join(Utils.IMG_DIR, file)
-    try:
-        if os.path.isfile(path):
-            os.unlink(path)
-    except Exception as e:
-        print e
-
-
 def test_segmentation_method(barcode_seg_func):
     total_tests = 0
     total_success = 0
@@ -83,7 +104,8 @@ def test_segmentation_method(barcode_seg_func):
                 for image in Utils.get_images_from_pdf(file):
                     total_tests += 1
                     found_code = False
-                    for barcode_img in barcode_seg_func(image):
+                    segments = barcode_seg_func(image)
+                    for barcode_img in segments:
                         code = Utils.decode_barcode_img(barcode_img)
                         if code is not None:
                             found_code = True
@@ -93,27 +115,42 @@ def test_segmentation_method(barcode_seg_func):
                     else:
                         filename = '{}{}_failed{:d}.png'.format(Utils.IMG_DIR, barcode_seg_func.__name__, total_tests)
                         cv2.imwrite(filename, image)
+                        seg_num = 1
+                        for segment in segments:
+                            filename = '{}{}_failed{:d}[seg{:d}].png'.format(Utils.IMG_DIR, barcode_seg_func.__name__,
+                                                                          total_tests, seg_num)
+                            cv2.imwrite(filename, segment)
+                            seg_num += 1
     return total_tests, total_success
+
+
+# Begin testing
+print "      Python version: {}".format(platform.python_version())
+print "      OpenCV version: {}".format(cv2.__version__)
+
+# Customize these paths according to your system before running
+Utils.IMG_DIR = '/Users/leonardofilipe/PGC-img/'
+PDF_PATH = '/Users/leonardofilipe/Dropbox/UFABC/PGC-Leonardo/codigo/corrections/'
+
+for file in os.listdir(Utils.IMG_DIR):
+    path = os.path.join(Utils.IMG_DIR, file)
+    try:
+        if os.path.isfile(path):
+            os.unlink(path)
+    except Exception as e:
+        print e
+
+start_time = time.time()
+tests, success = test_segmentation_method(get_mctest_barcode_sub_imgs)
+time_elapsed = time.time() - start_time
+print '         MCTest test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
 
 start_time = time.time()
 tests, success = test_segmentation_method(get_morph_barcode_sub_imgs)
 time_elapsed = time.time() - start_time
-print 'Morphological test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
+print '  Morphological test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
 
 start_time = time.time()
 tests, success = test_segmentation_method(get_subimg_barcode_sub_imgs)
 time_elapsed = time.time() - start_time
-print '    Sub image test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
-
-# pdf_images = Utils.get_images_from_pdf('test0.pdf')
-#
-# barcodeImg = get_morph_barcode_sub_imgs(pdf_images[0])[0]
-# cv2.imwrite(Utils.IMG_DIR + 'barcodeMorph.jpg', barcodeImg)
-# print Utils.decode_barcode_img(barcodeImg)
-#
-# i = 1
-# barcode_imgs = get_subimg_barcode_sub_imgs(pdf_images[0])
-# for img in barcode_imgs:
-#    print Utils.decode_barcode_img(img)
-#    cv2.imwrite(Utils.IMG_DIR + 'barcodeSub' + str(i) + '.jpg', img)
-#    i += 1
+print '      Sub image test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
