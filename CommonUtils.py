@@ -175,6 +175,9 @@ class Utils(object):
 
     @staticmethod
     def decode_barcode_img(cv2_img):
+        rows, cols = cv2_img.shape
+        if rows < 1 or cols < 1:
+            return None
         try:
             r, png_bytes = cv2.imencode('.png', cv2_img)
             pil_png = Image.open(io.BytesIO(png_bytes)).convert('L')

@@ -4,7 +4,7 @@ from CommonUtils import Utils
 
 
 class Cell(object):
-    COMPACTNESS_THRESHOLD = 2
+    COMPACTNESS_THRESHOLD = 3
     CONTOUR_SIZE_THRESH = 10
 
     def __init__(self, row, col, cell_img):
