@@ -168,6 +168,7 @@ time_elapsed = time.time() - start_time
 print '  Morphological test results: {:4d} out of {:4d} images in {:4.2f} s'.format(success, tests, time_elapsed)
 
 best_count = 0
+best_size = CELL_SIZE
 for test_cell_size in [30, 40, 50]:
     CELL_SIZE = test_cell_size
     start_time = time.time()
@@ -178,7 +179,7 @@ for test_cell_size in [30, 40, 50]:
     if success >= best_count:
         best_size = test_cell_size
 
-CELL_SIZE = test_cell_size
+CELL_SIZE = best_size
 for test_angle in [25, 45, 85, 90]:
     PAGE_ROTATION = test_angle
     start_time = time.time()
